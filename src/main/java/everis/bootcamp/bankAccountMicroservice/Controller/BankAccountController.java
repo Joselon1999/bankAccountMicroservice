@@ -4,6 +4,7 @@ import everis.bootcamp.bankAccountMicroservice.Document.BankAccount;
 import everis.bootcamp.bankAccountMicroservice.Service.BankAccountService;
 import everis.bootcamp.bankAccountMicroservice.ServiceDTO.Request.AddBankAccountRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -34,20 +35,24 @@ public class BankAccountController {
         return isPresent;
     }
 
-    @PostMapping(value = "/newBankAccount/{clientId}",produces = {MediaType.APPLICATION_STREAM_JSON_VALUE})
-    public Mono<BankAccount> createBankAccount(@PathVariable(value = "clientId") String clientId,
+    @PostMapping(value = "/newBankAccount/{clientId}")
+    public Mono<BankAccount> createClientBankAccount(@PathVariable(value = "clientId") String clientId,
                                                @RequestBody AddBankAccountRequest addBankAccountRequest){
-
+        BankAccount bankAccount = new BankAccount();
+        BeanUtils.copyProperties(addBankAccountRequest,bankAccount);
+        bankAccount.setClientId(clientId);
+        bankAccount.setSerialNumber(addBankAccountRequest.getSerialNumber());
+        bankAccount.setType(addBankAccountRequest.getType());
         if (exist(clientId)){
-            return bankAccountService.create(addBankAccountRequest,clientId);
+            return bankAccountService.create(bankAccount);
         }else {
             return Mono.empty();
         }
     }
 /*UPDATE*/
 
-    @PutMapping(value = "/update/{clientId}/{bankId}",produces = {MediaType.APPLICATION_STREAM_JSON_VALUE})
-    public Mono<ResponseEntity<BankAccount>> updateClient(@PathVariable("clientId") String clientId,
+    @PutMapping(value = "/update/{clientId}/{bankId}")
+    public Mono<ResponseEntity<BankAccount>> updateClientBankAccount(@PathVariable("clientId") String clientId,
                                                           @PathVariable("bankId") String bankId,
                                                           @RequestBody AddBankAccountRequest addBankAccountRequest) {
         return bankAccountService.update(bankId,addBankAccountRequest)
@@ -57,16 +62,16 @@ public class BankAccountController {
     }
     /*READ*/
     @GetMapping(value = "/selectAll/{clientId}")
-    public Mono<ResponseEntity<Flux<BankAccount>>> list(@PathVariable(value = "clientId") String clientId){
+    public ResponseEntity<Flux<BankAccount>> listClientBankAccounts(@PathVariable(value = "clientId") String clientId){
         if (exist(clientId)) {
-            return Mono.just(ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(bankAccountService.readAll()));
+            return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(bankAccountService.readAll(clientId));
         }else{
-            return Mono.empty();
+            return null;
         }
     }
     /*DELETE*/
-    @DeleteMapping(value = "/delete/{clientId}/{bankId}",produces = {MediaType.APPLICATION_STREAM_JSON_VALUE})
-    public Mono<BankAccount> deleteClient(@PathVariable(value = "clientId") String clientId,
+    @DeleteMapping(value = "/delete/{clientId}/{bankId}")
+    public Mono<BankAccount> deleteClientBankAccount(@PathVariable(value = "clientId") String clientId,
                                           @PathVariable(value = "bankId") String bankId){
         if (exist(clientId)) {
         return bankAccountService.delete(bankId);
@@ -75,7 +80,7 @@ public class BankAccountController {
         }
     }
     /*FIND ONE
-    @GetMapping(value = "/find/{clientId}",produces = {MediaType.APPLICATION_STREAM_JSON_VALUE})
+    @GetMapping(value = "/find/{clientId}")
     public Mono<Client> findOne(@PathVariable(value = "clientId") String clientId){
         return clientService.getOne(clientId);
     }*/

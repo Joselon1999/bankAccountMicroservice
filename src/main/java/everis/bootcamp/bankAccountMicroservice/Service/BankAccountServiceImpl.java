@@ -23,23 +23,8 @@ public class BankAccountServiceImpl implements BankAccountService {
     BankAccountRepository bankAccountRepository;
 
     @Override
-    public Mono<BankAccount> create(AddBankAccountRequest addBankAccountRequest,String clientId) {
-        return addBankAccountToRepository(addBankAccountRequest,clientId);
-    }
-    private Mono<BankAccount> addBankAccountToRepository(AddBankAccountRequest addBankAccountRequest,String clientId) {
-        return bankAccountRepository.findBySerialNumber(addBankAccountRequest.getSerialNumber())
-                .switchIfEmpty(bankAccountRepository.save(toBankAccount(addBankAccountRequest,clientId)));
-    }
-
-    private BankAccount toBankAccount(AddBankAccountRequest addBankAccountRequest,String clientId) {
-        BankAccount bankAccount = new BankAccount();
-        BeanUtils.copyProperties(addBankAccountRequest,bankAccount);
-        bankAccount.setId(UUID.randomUUID().toString());
-        bankAccount.setSerialNumber(addBankAccountRequest.getSerialNumber());
-        bankAccount.setType(addBankAccountRequest.getType());
-        bankAccount.setClientId(clientId);
-
-        return bankAccount;
+    public Mono<BankAccount> create(BankAccount bankAccount) {
+        return bankAccountRepository.save(bankAccount);
     }
 
     @Override
@@ -53,8 +38,8 @@ public class BankAccountServiceImpl implements BankAccountService {
     }
 
     @Override
-    public Flux<BankAccount> readAll() {
-        return bankAccountRepository.findAll().switchIfEmpty(Flux.empty());
+    public Flux<BankAccount> readAll(String clientId) {
+        return bankAccountRepository.findAllByClientId(clientId);
     }
 
     @Override
