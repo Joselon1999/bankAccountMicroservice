@@ -3,18 +3,12 @@ package everis.bootcamp.bankAccountMicroservice.Service;
 import everis.bootcamp.bankAccountMicroservice.Document.BankAccount;
 import everis.bootcamp.bankAccountMicroservice.Repository.BankAccountRepository;
 import everis.bootcamp.bankAccountMicroservice.ServiceDTO.Request.AddBankAccountRequest;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
-import java.util.UUID;
 
 @Service
 public class BankAccountServiceImpl implements BankAccountService {
@@ -52,6 +46,10 @@ public class BankAccountServiceImpl implements BankAccountService {
     @Override
     public Mono<BankAccount> getOne(String id) {
         return bankAccountRepository.findById(id);
+    }
+
+    @Override
+    public Mono<BankAccount> isPresent(String clientId) {return bankAccountRepository.findByClientIdExists(clientId);
     }
 
 }

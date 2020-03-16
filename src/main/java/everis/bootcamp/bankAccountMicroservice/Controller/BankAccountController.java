@@ -26,6 +26,18 @@ public class BankAccountController {
     BankAccountService bankAccountService;
 
     private Boolean exist(String id){
+
+        Mono<Boolean> temp = Mono.just(true);
+
+        //MAP INSIDE COLLECTION BANK ACCOUNT
+        /*Mono<Boolean> inBankAccount = bankAccountService.isPresent(id);
+        if (inBankAccount.equals(temp)){
+            System.out.println("Existe  ");
+        }else {
+            System.out.println("No existe  ");
+        }*/
+
+        //MAP OUTSIDE ON COLLECTION CLIENTS
         Map<String,String> uriVariables= new HashMap<>();
         uriVariables.put("clientId",id);
         ResponseEntity<Boolean> responseEntity =new RestTemplate().
