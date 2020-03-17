@@ -7,6 +7,8 @@ import lombok.Setter;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import javax.validation.constraints.NotBlank;
+
 @Document(value = "bankAccount")
 @Getter
 @Setter
@@ -15,7 +17,10 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class BankAccount {
     @Id
     private String id;
+    @NotBlank(message = "'serialNumber' can't be blank")
     private String serialNumber;
+    @NotBlank(message = "'type' can't be blank")
     private String type;
+    @NotBlank(message = "'clientId' can't be blank")
     private String clientId;
 }

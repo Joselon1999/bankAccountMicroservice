@@ -1,4 +1,4 @@
-package everis.bootcamp.bankAccountMicroservice;
+package everis.bootcamp.bankAccountMicroservice.Configuration;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

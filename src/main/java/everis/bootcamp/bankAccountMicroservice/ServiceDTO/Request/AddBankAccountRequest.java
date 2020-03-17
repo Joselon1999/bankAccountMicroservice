@@ -10,4 +10,5 @@ import lombok.*;
 public class AddBankAccountRequest {
     private String serialNumber;
     private String type;
+    private String clientId;
 }

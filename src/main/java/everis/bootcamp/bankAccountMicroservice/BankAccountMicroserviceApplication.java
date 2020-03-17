@@ -38,17 +38,4 @@ public class BankAccountMicroserviceApplication {
 
 		return converter;
 	}
-
-	@RefreshScope
-	@RestController
-	class MessageRestController {
-
-		@Value("${server.url:Unable to connect to config server}")
-		private String url;
-
-		@RequestMapping("/server/url")
-		String getURL() {
-			return this.url;
-		}
-	}
 }
