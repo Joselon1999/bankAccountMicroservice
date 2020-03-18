@@ -11,5 +11,8 @@ public interface BankAccountService {
     Flux<BankAccount> readAll(String clientId);
     Mono<BankAccount> delete(String bankId);
     Mono<BankAccount> getOne(String id);
-    Mono<BankAccount> isPresent(String clientId);
+
+
+    Mono<Boolean> isPresent(String clientId);
+    //Flux<BankAccount> findAllByAccountType(String type);
 }

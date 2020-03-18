@@ -5,15 +5,11 @@ import everis.bootcamp.bankAccountMicroservice.Repository.BankAccountRepository;
 import everis.bootcamp.bankAccountMicroservice.ServiceDTO.Request.AddBankAccountRequest;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 
 @Service
@@ -21,27 +17,37 @@ public class BankAccountServiceImpl implements BankAccountService {
 
     @Autowired
     BankAccountRepository bankAccountRepository;
+    /**/
+    private Boolean hasBankAccount(String id){
 
-    private Boolean exist(String id){
+        Boolean clientAccount = bankAccountRepository.existsByClientId(id).block();
 
-        Mono<Boolean> temp = Mono.just(true);
 
-        //MAP INSIDE COLLECTION BANK ACCOUNT
-        /*Mono<Boolean> inBankAccount = bankAccountService.isPresent(id);
-        if (inBankAccount.equals(temp)){
-            System.out.println("Existe  ");
-        }else {
-            System.out.println("No existe  ");
-        }*/
+        if (clientAccount == true) {
+            System.out.println("TIENE CUENTA BANCARIA");
+            return true;
+        } else {
+            System.out.println("NO POSEE CUENTA BANCARIA");
+            return false;
+        }
+    }
 
-        //MAP OUTSIDE ON COLLECTION CLIENTS
-        Map<String,String> uriVariables= new HashMap<>();
-        uriVariables.put("clientId",id);
-        ResponseEntity<Boolean> responseEntity =new RestTemplate().
-                getForEntity("http://localhost:8001/api/clients/exist/{clientId}",
-                        Boolean.class,uriVariables);
-        Boolean isPresent = responseEntity.getBody();
-        return isPresent;
+    private Boolean existInClient(String id){
+        String url = "http://localhost:8001/api/client/exist/"+id;
+        Mono<Boolean> client= WebClient.create()
+                .get()
+                .uri(url)
+                .retrieve()
+                .bodyToMono(Boolean.class);
+
+        Boolean value = client.block();
+        if (value == true){
+            System.out.println("ES CLIENTE");
+        }else{
+            System.out.println("NO ES CLIENTE");
+        }
+        return value;
+
     }
 
     @Override
@@ -52,10 +58,18 @@ public class BankAccountServiceImpl implements BankAccountService {
         bankAccount.setClientId(addBankAccountRequest.getClientId());
         bankAccount.setSerialNumber(addBankAccountRequest.getSerialNumber());
         bankAccount.setType(addBankAccountRequest.getType());
-        if (exist(bankAccount.getClientId())){
-            return bankAccountRepository.save(bankAccount);
-        }else {
+        if (hasBankAccount(bankAccount.getClientId())){
+            System.out.println("1");
             return Mono.empty();
+        }else{
+        if (existInClient(bankAccount.getClientId())){
+          System.out.println("2");
+          return bankAccountRepository.save(bankAccount);
+        }else {
+            System.out.println("3");
+            return Mono.empty();
+
+            }
         }
     }
 
@@ -72,11 +86,7 @@ public class BankAccountServiceImpl implements BankAccountService {
 
     @Override
     public Flux<BankAccount> readAll(String clientId) {
-        if (exist(clientId)) {
             return bankAccountRepository.findAllByClientId(clientId);
-        }else{
-            return null;
-        }
     }
 
     @Override
@@ -85,14 +95,16 @@ public class BankAccountServiceImpl implements BankAccountService {
                 .flatMap(bankAccount -> bankAccountRepository.delete(bankAccount).then(Mono.just(bankAccount)));
     }
 
-    //Find One 100%
+
     @Override
     public Mono<BankAccount> getOne(String id) {
         return bankAccountRepository.findById(id);
     }
 
     @Override
-    public Mono<BankAccount> isPresent(String clientId) {return bankAccountRepository.findByClientIdExists(clientId);
+    public Mono<Boolean> isPresent(String clientId) {
+        return bankAccountRepository.existsByClientId(clientId);
     }
+
 
 }

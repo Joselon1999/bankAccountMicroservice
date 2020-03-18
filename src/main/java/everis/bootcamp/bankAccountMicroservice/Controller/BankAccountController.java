@@ -57,9 +57,9 @@ public class BankAccountController {
         return bankAccountService.delete(bankId);
 
     }
-    /*FIND ONE
-    @GetMapping(value = "/find/{clientId}")
-    public Mono<Client> findOne(@PathVariable(value = "clientId") String clientId){
-        return clientService.getOne(clientId);
-    }*/
+    /*FIND ONE*/
+    @GetMapping(value = "/bankAccounts/exist/{clientId}")
+    public Mono<Boolean> findOne(@PathVariable(value = "clientId") String clientId){
+        return bankAccountService.isPresent(clientId);
+    }
 }
