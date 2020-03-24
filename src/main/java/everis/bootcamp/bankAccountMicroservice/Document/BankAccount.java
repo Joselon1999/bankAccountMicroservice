@@ -4,11 +4,11 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.validator.constraints.UniqueElements;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 
 @Document(value = "bankAccount")
 @Getter
@@ -20,8 +20,8 @@ public class BankAccount {
     private String id;
     @NotBlank(message = "'serialNumber' can't be blank")
     private String serialNumber;
-    @NotBlank(message = "'type' can't be blank")
-    private String type;
+    @NotNull(message = "'Type' can't be blank")
+    private BankAccountType bankAccountType;
     @NotBlank(message = "'clientId' can't be blank")
     private String clientId;
 }

@@ -9,6 +9,6 @@ import lombok.*;
 @Builder
 public class AddBankAccountRequest {
     private String serialNumber;
-    private String type;
+    private String idBankAccountType;
     private String clientId;
 }
