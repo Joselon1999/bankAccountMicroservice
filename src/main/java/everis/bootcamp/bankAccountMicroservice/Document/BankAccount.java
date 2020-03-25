@@ -1,20 +1,20 @@
 package everis.bootcamp.bankAccountMicroservice.Document;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import java.util.Set;
 
 @Document(value = "bankAccount")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@EqualsAndHashCode(callSuper = false)
+
 public class BankAccount {
     @Id
     private String id;
@@ -24,4 +24,9 @@ public class BankAccount {
     private BankAccountType bankAccountType;
     @NotBlank(message = "'clientId' can't be blank")
     private String clientId;
+    @NotBlank(message = "'dni' can't be blank")
+    private String dni;
+    private double monto;
+    private Set<String> holders;
+    private Set<String> signers;
 }

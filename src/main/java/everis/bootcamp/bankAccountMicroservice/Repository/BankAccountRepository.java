@@ -14,5 +14,5 @@ public interface BankAccountRepository extends ReactiveMongoRepository<BankAccou
     Flux<BankAccount> findAllByClientId(String clientId);
     Mono<BankAccount> findByClientId(String clientId);
     Mono<Boolean> existsByClientId(String clientId);
-
+    Flux<BankAccount> findAllByBankAccountType_Id(String Id);
 }
