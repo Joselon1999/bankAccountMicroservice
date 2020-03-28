@@ -18,4 +18,9 @@ public class AddBankAccountRequest {
     private double monto;
     private Set<String> holders;
     private Set<String> signers;
+    /*<------------------------------------------------>*/
+    /*  ESTOS CAMPOS SOLO PERTENECEN A LOS NUEVOS TIPOS */
+    /*<------------------------------------------------>*/
+    private double minAmmount;
+    private double minBalance;
 }

@@ -14,9 +14,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 @Service
 public class BankAccountServiceImpl implements BankAccountService {
@@ -97,6 +95,9 @@ public class BankAccountServiceImpl implements BankAccountService {
         System.out.println("TIPO   ID:    ->" + typoacc2.block());
         System.out.println("TIPO NAME:    ->" + typoacc.block());
 
+        List<String> clasesUnicas = Arrays.asList("cuentaAhorroPersonalVIP","cuentaCorrientePersonalVIP",
+                "empresarialPYME","empresarialCorporativo");
+
 
         /*VERSION OMEGA: No implementar el flatMap debido a bucle infinito que devuelve Error 503*/
         //return bankAccountTypeMono.flatMap(accountType -> {
@@ -115,6 +116,18 @@ public class BankAccountServiceImpl implements BankAccountService {
                 .name(typoacc.block())
                 .build());
 
+
+        //VALIDAR DATA PARA CUENTAS ESPECIALES PARTE 1
+        if (clasesUnicas.stream().anyMatch(s -> s.equals(bankAccount.getBankAccountType().getName()))){
+            System.out.println("TIPO: UNICO PARTE 1     ->      Asignacion");
+            bankAccount.setMinAmmount(addBankAccountRequest.getMinAmmount());
+            bankAccount.setMinBalance(addBankAccountRequest.getMinBalance());
+            if (bankAccount.getMinBalance()<=0){
+                return Mono.error(new Exception("MONTO MINIMO DE CREACION NO PUEDE SER MENOR IGUAL A 0"));
+            }else if (bankAccount.getMinAmmount()<=0){
+                return Mono.error(new Exception("SALDO MINIMO DE FINAL DE MES NO PUEDE SER MENOR IGUAL A 0"));
+            }
+        }
 
 
         String type = clientType(bankAccount.getClientId()).block().trim();
@@ -162,6 +175,17 @@ public class BankAccountServiceImpl implements BankAccountService {
             }else {
                 return Mono.error(new Exception("NO PUEDE CREAR ESTE TIPO DE CUENTA"));
             }
+        } else if ((type.equalsIgnoreCase("PersonaVIP"))||(type.equalsIgnoreCase("PYME"))||
+                (type.equalsIgnoreCase("Corporativo"))){
+            System.out.println("TIPO: UNICO");
+            BankAccountTransaction firstTransaction = new BankAccountTransaction();
+            firstTransaction.setIdCliente(addBankAccountRequest.getClientId());
+            firstTransaction.setSerialNumber(addBankAccountRequest.getSerialNumber());
+            firstTransaction.setTransferenceType("CREATING OTHER TYPE ACCOUNT");
+            firstTransaction.setTransferenceAmount(bankAccount.getMonto());
+            firstTransaction.setTotalAmount(bankAccount.getMonto());
+            bankAccountTransactionRepository.save(firstTransaction).subscribe();
+            return bankAccountRepository.save(bankAccount);
         } else {
             return Mono.error(new Exception("EL TIPO DE CLIENTE INGRESADO ES INCORRECTO - INGRESE CORRECTAMENTE"));
         }

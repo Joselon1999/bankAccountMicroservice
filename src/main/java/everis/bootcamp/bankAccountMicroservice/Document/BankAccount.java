@@ -1,6 +1,7 @@
 package everis.bootcamp.bankAccountMicroservice.Document;
 
 import lombok.*;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -29,4 +30,9 @@ public class BankAccount {
     private double monto;
     private Set<String> holders;
     private Set<String> signers;
+    /*<------------------------------------------------>*/
+    /*  ESTOS CAMPOS SOLO PERTENECEN A LOS NUEVOS TIPOS */
+    /*<------------------------------------------------>*/
+    private double minAmmount;
+    private double minBalance;
 }
