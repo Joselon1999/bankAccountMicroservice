@@ -4,6 +4,7 @@ import everis.bootcamp.bankAccountMicroservice.Document.BankAccount;
 import everis.bootcamp.bankAccountMicroservice.Document.BankAccountTransaction;
 import everis.bootcamp.bankAccountMicroservice.Service.BankAccountService;
 import everis.bootcamp.bankAccountMicroservice.ServiceDTO.Request.AddBankAccountRequest;
+import everis.bootcamp.bankAccountMicroservice.ServiceDTO.Request.CreditPaymentRequest;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -70,5 +71,14 @@ public class BankAccountController {
     public Mono<BankAccount> transferenceBankAccount(@PathVariable(value = "id") String id,
                                                      @Valid @RequestBody BankAccountTransaction bankAccountTransaction) {
         return bankAccountService.tranference(id,bankAccountTransaction);
+    }
+
+    /*TRANSFERENCE TO CREDIT*/
+    @ApiOperation(value = "REGISTER TRANSFERENCE OF MONEY TO CREDIT MICROSERVICE",
+            notes = "Requires ID AND CREDITPAYMENTREQUEST and will update and create an entity")
+    @PutMapping(value = "/toPayCredit/{id}")
+    public Mono<CreditPaymentRequest> transferenceBankAccount(@PathVariable(value = "id") String id,
+                                                              @Valid @RequestBody CreditPaymentRequest creditPaymentRequest) {
+        return bankAccountService.tranferenceToCreditAcc(id,creditPaymentRequest);
     }
 }

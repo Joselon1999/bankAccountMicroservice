@@ -9,9 +9,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-
-public class BankAccountTypeRequest {
-    private String name;
-    private double minCreationAmmount;
+public class CreditPaymentRequest {
+    private double ammount;
+    private String idCreditAccount;
 }
-

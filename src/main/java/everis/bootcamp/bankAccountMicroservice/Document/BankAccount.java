@@ -30,9 +30,10 @@ public class BankAccount {
     private double monto;
     private Set<String> holders;
     private Set<String> signers;
+    private int transactionLeft;
+    private double comision;
     /*<------------------------------------------------>*/
     /*  ESTOS CAMPOS SOLO PERTENECEN A LOS NUEVOS TIPOS */
     /*<------------------------------------------------>*/
-    private double minAmmount;
     private double minBalance;
 }

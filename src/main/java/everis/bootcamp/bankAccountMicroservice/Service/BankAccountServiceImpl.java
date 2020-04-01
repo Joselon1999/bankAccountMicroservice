@@ -7,6 +7,7 @@ import everis.bootcamp.bankAccountMicroservice.Repository.BankAccountRepository;
 import everis.bootcamp.bankAccountMicroservice.Repository.BankAccountTransactionRepository;
 import everis.bootcamp.bankAccountMicroservice.Repository.BankAccountTypeRepository;
 import everis.bootcamp.bankAccountMicroservice.ServiceDTO.Request.AddBankAccountRequest;
+import everis.bootcamp.bankAccountMicroservice.ServiceDTO.Request.CreditPaymentRequest;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -92,11 +93,16 @@ public class BankAccountServiceImpl implements BankAccountService {
                 .map(bankAccountType -> {
                     return bankAccountType.getId();
                 });
+        Mono<Double> typoacc3 = bankAccountTypeMono
+                .map(bankAccountType -> {
+                    return bankAccountType.getMinCreationAmmount();
+                });
         System.out.println("TIPO   ID:    ->" + typoacc2.block());
         System.out.println("TIPO NAME:    ->" + typoacc.block());
+        System.out.println("TIPO  MIN:    ->" + typoacc3.block());
 
-        List<String> clasesUnicas = Arrays.asList("cuentaAhorroPersonalVIP","cuentaCorrientePersonalVIP",
-                "empresarialPYME","empresarialCorporativo");
+        List<String> clasesUnicas = Arrays.asList("cuentaAhorroPersonalVIP", "cuentaCorrientePersonalVIP",
+                "empresarialPYME", "empresarialCorporativo");
 
 
         /*VERSION OMEGA: No implementar el flatMap debido a bucle infinito que devuelve Error 503*/
@@ -106,28 +112,17 @@ public class BankAccountServiceImpl implements BankAccountService {
         bankAccount.setClientId(addBankAccountRequest.getClientId());
         bankAccount.setSerialNumber(addBankAccountRequest.getSerialNumber());
         bankAccount.setDni(addBankAccountRequest.getDni());
-        bankAccount.setMonto(0);
+        bankAccount.setMonto(addBankAccountRequest.getMonto());
+        bankAccount.setComision(addBankAccountRequest.getComision());
         Set<String> holders = new HashSet<>();
         holders.add(bankAccount.getDni());
         bankAccount.setHolders(holders);
         bankAccount.setSigners(new HashSet<>());
+        bankAccount.setTransactionLeft(addBankAccountRequest.getTransactionLeft());
         bankAccount.setBankAccountType(BankAccountType.builder()
                 .id(typoacc2.block())
                 .name(typoacc.block())
                 .build());
-
-
-        //VALIDAR DATA PARA CUENTAS ESPECIALES PARTE 1
-        if (clasesUnicas.stream().anyMatch(s -> s.equals(bankAccount.getBankAccountType().getName()))){
-            System.out.println("TIPO: UNICO PARTE 1     ->      Asignacion");
-            bankAccount.setMinAmmount(addBankAccountRequest.getMinAmmount());
-            bankAccount.setMinBalance(addBankAccountRequest.getMinBalance());
-            if (bankAccount.getMinBalance()<=0){
-                return Mono.error(new Exception("MONTO MINIMO DE CREACION NO PUEDE SER MENOR IGUAL A 0"));
-            }else if (bankAccount.getMinAmmount()<=0){
-                return Mono.error(new Exception("SALDO MINIMO DE FINAL DE MES NO PUEDE SER MENOR IGUAL A 0"));
-            }
-        }
 
 
         String type = clientType(bankAccount.getClientId()).block().trim();
@@ -171,13 +166,30 @@ public class BankAccountServiceImpl implements BankAccountService {
                 firstTransaction.setTransferenceAmount(bankAccount.getMonto());
                 firstTransaction.setTotalAmount(bankAccount.getMonto());
                 bankAccountTransactionRepository.save(firstTransaction).subscribe();
-                    return bankAccountRepository.save(bankAccount);
-            }else {
+                return bankAccountRepository.save(bankAccount);
+            } else {
                 return Mono.error(new Exception("NO PUEDE CREAR ESTE TIPO DE CUENTA"));
             }
-        } else if ((type.equalsIgnoreCase("PersonaVIP"))||(type.equalsIgnoreCase("PYME"))||
-                (type.equalsIgnoreCase("Corporativo"))){
+        } else if ((type.equalsIgnoreCase("PersonaVIP")) || (type.equalsIgnoreCase("PYME")) ||
+                (type.equalsIgnoreCase("Corporativo"))) {
+
             System.out.println("TIPO: UNICO");
+
+            //VALIDAR DATA PARA CUENTAS ESPECIALES PARTE 1
+            if (clasesUnicas.stream().anyMatch(s -> s.equals(bankAccount.getBankAccountType().getName()))) {
+                System.out.println("TIPO: UNICO PARTE 1     ->      Asignacion");
+                bankAccount.setMinBalance(addBankAccountRequest.getMinBalance());
+
+                if (bankAccount.getMinBalance() <= 0) {
+                    return Mono.error(new Exception("SALDO MINIMO DE FINAL DE MES NO PUEDE SER MENOR IGUAL A 0"));
+                }
+                if (bankAccount.getMonto() < typoacc3.block()) {
+                    System.out.println(bankAccount.getMonto());
+                    return Mono.error(new Exception("MONTO INGRESADO ES MENOR AL MINIMO REQUERIDO"));
+                }
+            }
+
+            //VALIDAR DATA PARA CUENTAS ESPECIALES PARTE 1
             BankAccountTransaction firstTransaction = new BankAccountTransaction();
             firstTransaction.setIdCliente(addBankAccountRequest.getClientId());
             firstTransaction.setSerialNumber(addBankAccountRequest.getSerialNumber());
@@ -199,6 +211,9 @@ public class BankAccountServiceImpl implements BankAccountService {
             client.setSerialNumber(addBankAccountRequest.getSerialNumber());
             //client.setType(addBankAccountRequest.getType());      ->  NO lo pongo porque no deberia poder cambiarse
             client.setDni(addBankAccountRequest.getDni());
+            client.setTransactionLeft(addBankAccountRequest.getTransactionLeft());
+            client.setMinBalance(addBankAccountRequest.getMinBalance());
+            client.setComision(addBankAccountRequest.getComision());
             Set<String> holders = new HashSet<>();
             holders.addAll(client.getHolders());
             client.setHolders(holders);
@@ -233,23 +248,87 @@ public class BankAccountServiceImpl implements BankAccountService {
         return bankAccountRepository.existsByClientId(clientId);
     }
 
+//    @Override
+//    public Mono<BankAccount> tranference(String id, BankAccountTransaction bankAccountTransaction) {
+//        return bankAccountRepository.findById(id).flatMap(bankAccount -> {
+//            double total = bankAccount.getMonto();
+//            if (total+bankAccountTransaction.getTransferenceAmount()>0){
+//                bankAccount.setMonto(total+bankAccountTransaction.getTransferenceAmount());
+//            }else{
+//                return Mono.error(new Exception("Monto a retirar supera a monto actual"));
+//            }
+//            BankAccountTransaction newTransaction = new BankAccountTransaction();
+//            newTransaction.setIdCliente(bankAccountTransaction.getIdCliente());
+//            newTransaction.setSerialNumber(bankAccountTransaction.getSerialNumber());
+//            newTransaction.setTransferenceType("TRANSFERENCE");
+//            newTransaction.setTransferenceAmount(bankAccountTransaction.getTransferenceAmount());
+//            newTransaction.setTotalAmount(bankAccount.getMonto());
+//            bankAccountTransactionRepository.save(newTransaction).subscribe();
+//            return bankAccountRepository.save(bankAccount);
+//        });
+//    }
+
+
     @Override
     public Mono<BankAccount> tranference(String id, BankAccountTransaction bankAccountTransaction) {
-        return bankAccountRepository.findById(id).flatMap(bankAccount -> {
-            double total = bankAccount.getMonto();
-            if (total+bankAccountTransaction.getTransferenceAmount()>0){
-                bankAccount.setMonto(total+bankAccountTransaction.getTransferenceAmount());
-            }else{
-                return Mono.error(new Exception("Monto a retirar supera a monto actual"));
-            }
-            BankAccountTransaction newTransaction = new BankAccountTransaction();
-            newTransaction.setIdCliente(bankAccountTransaction.getIdCliente());
-            newTransaction.setSerialNumber(bankAccountTransaction.getSerialNumber());
-            newTransaction.setTransferenceType("TRANSFERENCE");
-            newTransaction.setTransferenceAmount(bankAccountTransaction.getTransferenceAmount());
-            newTransaction.setTotalAmount(bankAccount.getMonto());
-            bankAccountTransactionRepository.save(newTransaction).subscribe();
-            return bankAccountRepository.save(bankAccount);
-        });
+        return bankAccountRepository.findById(id)
+                .filter(bankAccount -> bankAccount.getMonto() + bankAccountTransaction.getTransferenceAmount() >= 0)
+                .switchIfEmpty(Mono.error(new Exception("Monto a retirar supera a monto actual")))
+                .filter(bankAccount -> bankAccount.getMonto() +
+                        bankAccountTransaction.getTransferenceAmount() >= bankAccount.getMinBalance())
+                .switchIfEmpty(Mono.error(new Exception("Monto a retirar supera a monto permitido")))
+                //.filter(bankAccount ->bankAccount.getTransactionLeft()>0)
+                //.switchIfEmpty(Mono.error(new Exception("LIMITE DE TRANSACCIONES ALCANZADO")))
+
+                .flatMap(bankAccount -> {
+                    double descuento = bankAccount.getComision();
+                    if (bankAccount.getTransactionLeft() > 0) {
+                        bankAccount.setMonto(bankAccount.getMonto() + bankAccountTransaction.getTransferenceAmount());
+                    } else {
+                        bankAccount.setMonto(bankAccount.getMonto() + bankAccountTransaction.getTransferenceAmount() - descuento);
+                    }
+                    bankAccount.setTransactionLeft(bankAccount.getTransactionLeft() - 1);
+                    BankAccountTransaction newTransaction = new BankAccountTransaction();
+                    newTransaction.setIdCliente(bankAccount.getClientId());
+                    newTransaction.setSerialNumber(bankAccount.getSerialNumber());
+                    newTransaction.setTransferenceType("TRANSFERENCE");
+                    newTransaction.setTransferenceAmount(bankAccountTransaction.getTransferenceAmount());
+                    newTransaction.setTotalAmount(bankAccount.getMonto());
+                    bankAccountTransactionRepository.save(newTransaction).subscribe();
+                    System.out.println("MONTO INGRESADO:    " + newTransaction.getTransferenceAmount());
+                    System.out.println("MONTO TOTAL ACTUAL: " + newTransaction.getTotalAmount());
+                    System.out.println("LIMITE PARA RETIRAR:" + bankAccount.getMinBalance());
+                    return bankAccountRepository.save(bankAccount);
+                });
+    }
+
+    @Override
+    public Mono<CreditPaymentRequest> tranferenceToCreditAcc(String id, CreditPaymentRequest creditPaymentRequest) {
+        Mono<BankAccount> test = bankAccountRepository.findById(id)
+                .filter(bankAccount ->bankAccount.getMonto()>0)
+                .switchIfEmpty(Mono.error(new Exception("Monto a pagar debe ser mayor a 0")))
+                .filter(bankAccount ->bankAccount.getMonto()-creditPaymentRequest.getAmmount()>=0)
+                .switchIfEmpty(Mono.error(new Exception("Monto a pagar supera a monto en deuda")))
+                .flatMap(bankAccount -> {
+                    double descuento = bankAccount.getComision();
+                    if (bankAccount.getTransactionLeft() > 0) {
+                        bankAccount.setMonto(bankAccount.getMonto() + creditPaymentRequest.getAmmount());
+                    } else {
+                        bankAccount.setMonto(bankAccount.getMonto() + creditPaymentRequest.getAmmount() - descuento);
+                    }
+                    bankAccount.setTransactionLeft(bankAccount.getTransactionLeft() - 1);
+                    BankAccountTransaction newTransaction = new BankAccountTransaction();
+                    newTransaction.setIdCliente(bankAccount.getClientId());
+                    newTransaction.setSerialNumber(bankAccount.getSerialNumber());
+                    newTransaction.setTransferenceType("TRANSFERENCE");
+                    newTransaction.setTransferenceAmount(creditPaymentRequest.getAmmount());
+                    newTransaction.setTotalAmount(bankAccount.getMonto());
+                    bankAccountTransactionRepository.save(newTransaction).subscribe();
+                    System.out.println("MONTO INGRESADO:    " + newTransaction.getTransferenceAmount());
+                    System.out.println("MONTO TOTAL ACTUAL: " + newTransaction.getTotalAmount());
+                    System.out.println("LIMITE PARA RETIRAR:" + bankAccount.getMinBalance());
+                    return bankAccountRepository.save(bankAccount);
+                });
+        return Mono.just(creditPaymentRequest);
     }
 }

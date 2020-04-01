@@ -25,6 +25,7 @@ public class BankAccountTypeServiceImpl implements BankAccountTypeService{
     public Mono<BankAccountType> update(String id, BankAccountTypeRequest bankAccountTypeRequest) {
         return bankAccountTypeRepository.findById(id).flatMap(bankAccount -> {
             bankAccount.setName(bankAccountTypeRequest.getName());
+            bankAccount.setMinCreationAmmount(bankAccountTypeRequest.getMinCreationAmmount());
             return bankAccountTypeRepository.save(bankAccount);
         });
     }

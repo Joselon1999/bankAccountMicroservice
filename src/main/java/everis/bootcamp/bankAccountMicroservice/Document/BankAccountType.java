@@ -14,4 +14,5 @@ public class BankAccountType {
     @Id
     private String id;
     private String name;
+    private double minCreationAmmount;
 }
