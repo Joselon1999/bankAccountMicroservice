@@ -27,6 +27,7 @@ public class BankAccountServiceImpl implements BankAccountService {
     @Autowired
     BankAccountTypeRepository bankAccountTypeRepository;
 
+
     /*VALIDATION AND CONDITIONS SECTION*/
     private Boolean hasBankAccount(String id) {
 
@@ -304,7 +305,8 @@ public class BankAccountServiceImpl implements BankAccountService {
 
     @Override
     public Mono<CreditPaymentRequest> tranferenceToCreditAcc(String id, CreditPaymentRequest creditPaymentRequest) {
-        Mono<BankAccount> test = bankAccountRepository.findById(id)
+        //Mono<BankAccount> test = bankAccountRepository.findById(id)
+        return bankAccountRepository.findById(id)
                 .filter(bankAccount ->bankAccount.getMonto()>0)
                 .switchIfEmpty(Mono.error(new Exception("Monto a pagar debe ser mayor a 0")))
                 .filter(bankAccount ->bankAccount.getMonto()-creditPaymentRequest.getAmmount()>=0)
@@ -312,9 +314,9 @@ public class BankAccountServiceImpl implements BankAccountService {
                 .flatMap(bankAccount -> {
                     double descuento = bankAccount.getComision();
                     if (bankAccount.getTransactionLeft() > 0) {
-                        bankAccount.setMonto(bankAccount.getMonto() + creditPaymentRequest.getAmmount());
+                        bankAccount.setMonto(bankAccount.getMonto() - creditPaymentRequest.getAmmount());
                     } else {
-                        bankAccount.setMonto(bankAccount.getMonto() + creditPaymentRequest.getAmmount() - descuento);
+                        bankAccount.setMonto(bankAccount.getMonto() - creditPaymentRequest.getAmmount() - descuento);
                     }
                     bankAccount.setTransactionLeft(bankAccount.getTransactionLeft() - 1);
                     BankAccountTransaction newTransaction = new BankAccountTransaction();
@@ -327,8 +329,21 @@ public class BankAccountServiceImpl implements BankAccountService {
                     System.out.println("MONTO INGRESADO:    " + newTransaction.getTransferenceAmount());
                     System.out.println("MONTO TOTAL ACTUAL: " + newTransaction.getTotalAmount());
                     System.out.println("LIMITE PARA RETIRAR:" + bankAccount.getMinBalance());
-                    return bankAccountRepository.save(bankAccount);
+                    bankAccountRepository.save(bankAccount).subscribe();
+
+                    transfere(creditPaymentRequest).subscribe();
+
+                    return Mono.just(creditPaymentRequest);
                 });
-        return Mono.just(creditPaymentRequest);
+    }
+    private Mono<CreditPaymentRequest> transfere(CreditPaymentRequest creditPaymentRequest){
+        System.out.println("Se transfiere");
+        return WebClient.create()
+                .put()
+                .uri("http://localhost:8020/api/creditAccounts/reciveTranference")
+                //.body(BodyInserters.fromObject(creditPaymentRequest))
+                .body(Mono.just(creditPaymentRequest), CreditPaymentRequest.class)
+                .retrieve()
+                .bodyToMono(CreditPaymentRequest.class);
     }
 }
