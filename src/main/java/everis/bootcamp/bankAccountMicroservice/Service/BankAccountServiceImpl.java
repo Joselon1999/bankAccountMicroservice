@@ -6,6 +6,7 @@ import everis.bootcamp.bankAccountMicroservice.Document.BankAccountType;
 import everis.bootcamp.bankAccountMicroservice.Repository.BankAccountRepository;
 import everis.bootcamp.bankAccountMicroservice.Repository.BankAccountTransactionRepository;
 import everis.bootcamp.bankAccountMicroservice.Repository.BankAccountTypeRepository;
+import everis.bootcamp.bankAccountMicroservice.ServiceDTO.Request.AccountsRequest;
 import everis.bootcamp.bankAccountMicroservice.ServiceDTO.Request.AddBankAccountRequest;
 import everis.bootcamp.bankAccountMicroservice.ServiceDTO.Request.CreditPaymentRequest;
 import org.springframework.beans.BeanUtils;
@@ -77,6 +78,13 @@ public class BankAccountServiceImpl implements BankAccountService {
         return type;
     }
 
+    private Mono<Boolean> validateCreditDebt(String id){
+        return WebClient.create()
+                .get()
+                .uri("http://localhost:8020/api/creditAccounts/findDebt/"+id)
+                .retrieve()
+                .bodyToMono(Boolean.class);
+    }
     //CRUD AND IMPLEMENTATIONS
 
     @Override
@@ -84,6 +92,8 @@ public class BankAccountServiceImpl implements BankAccountService {
         Mono<BankAccountType> bankAccountTypeMono =
                 bankAccountTypeRepository.findById(addBankAccountRequest.getIdBankAccountType())
                         .switchIfEmpty(Mono.error(new Exception("TIPO DE CUENTA BANCARIA ERRONEO")));
+
+
 
         //Testing NO BORRAR
         Mono<String> typoacc = bankAccountTypeMono
@@ -120,6 +130,8 @@ public class BankAccountServiceImpl implements BankAccountService {
         bankAccount.setHolders(holders);
         bankAccount.setSigners(new HashSet<>());
         bankAccount.setTransactionLeft(addBankAccountRequest.getTransactionLeft());
+        bankAccount.setBankId(addBankAccountRequest.getBankId());
+        bankAccount.setCreationDate(new Date());
         bankAccount.setBankAccountType(BankAccountType.builder()
                 .id(typoacc2.block())
                 .name(typoacc.block())
@@ -127,6 +139,10 @@ public class BankAccountServiceImpl implements BankAccountService {
 
 
         String type = clientType(bankAccount.getClientId()).block().trim();
+
+        if (validateCreditDebt(bankAccount.getClientId()).block()){
+            return Mono.error(new Exception("EL CLIENTE TIENE DEUDAS PENDIENTES"));
+        }
 
         //if (clientType(bankAccount.getClientId()).equals(Mono.just("Personal"))) {
         if (clientType(bankAccount.getClientId()).block().trim().equalsIgnoreCase("Personal")) {
@@ -215,6 +231,7 @@ public class BankAccountServiceImpl implements BankAccountService {
             client.setTransactionLeft(addBankAccountRequest.getTransactionLeft());
             client.setMinBalance(addBankAccountRequest.getMinBalance());
             client.setComision(addBankAccountRequest.getComision());
+            //client.setBankId(addBankAccountRequest.getBankId());  ->  NO estoy seguro si es logico actualizar banco
             Set<String> holders = new HashSet<>();
             holders.addAll(client.getHolders());
             client.setHolders(holders);
@@ -305,7 +322,7 @@ public class BankAccountServiceImpl implements BankAccountService {
 
     @Override
     public Mono<CreditPaymentRequest> tranferenceToCreditAcc(String id, CreditPaymentRequest creditPaymentRequest) {
-        //Mono<BankAccount> test = bankAccountRepository.findById(id)
+        try {
         return bankAccountRepository.findById(id)
                 .filter(bankAccount ->bankAccount.getMonto()>0)
                 .switchIfEmpty(Mono.error(new Exception("Monto a pagar debe ser mayor a 0")))
@@ -335,15 +352,29 @@ public class BankAccountServiceImpl implements BankAccountService {
 
                     return Mono.just(creditPaymentRequest);
                 });
+        }catch (Exception e){
+            return Mono.error(e);
+        }
     }
     private Mono<CreditPaymentRequest> transfere(CreditPaymentRequest creditPaymentRequest){
         System.out.println("Se transfiere");
+        try {
         return WebClient.create()
                 .put()
                 .uri("http://localhost:8020/api/creditAccounts/reciveTranference")
-                //.body(BodyInserters.fromObject(creditPaymentRequest))
                 .body(Mono.just(creditPaymentRequest), CreditPaymentRequest.class)
                 .retrieve()
                 .bodyToMono(CreditPaymentRequest.class);
+    }catch (Exception e){
+        return Mono.error(e);
+    }
+    }
+
+    @Override
+    public Flux<BankAccount> readAllByBankInTime(String bankId,int days) {
+        long DAY_IN_MS = 1000 * 60 * 60 * 24;
+        Date begin = new Date(System.currentTimeMillis() - (days * DAY_IN_MS));
+        System.out.println("DIAS: "+days);
+        return bankAccountRepository.findByBankIdAndCreationDateBetween(bankId,begin,new Date());
     }
 }

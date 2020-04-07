@@ -16,6 +16,7 @@ public class AddBankAccountRequest {
     private String clientId;
     private String dni;
     private double monto;
+    private String bankId;
     private Set<String> holders;
     private Set<String> signers;
     private int transactionLeft;

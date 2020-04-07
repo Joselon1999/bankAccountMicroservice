@@ -7,6 +7,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import java.util.Date;
 import java.util.Set;
 
 @Document(value = "bankAccount")
@@ -27,11 +28,14 @@ public class BankAccount {
     private String clientId;
     @NotBlank(message = "'dni' can't be blank")
     private String dni;
+    @NotBlank(message = "'bankId' can't be blank")
+    private String bankId;
     private double monto;
     private Set<String> holders;
     private Set<String> signers;
     private int transactionLeft;
     private double comision;
+    private Date creationDate;
     /*<------------------------------------------------>*/
     /*  ESTOS CAMPOS SOLO PERTENECEN A LOS NUEVOS TIPOS */
     /*<------------------------------------------------>*/

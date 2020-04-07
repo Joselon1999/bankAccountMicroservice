@@ -7,6 +7,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
+import java.util.Date;
 import java.util.Optional;
 
 @Repository
@@ -14,5 +15,5 @@ public interface BankAccountRepository extends ReactiveMongoRepository<BankAccou
     Flux<BankAccount> findAllByClientId(String clientId);
     Mono<BankAccount> findByClientId(String clientId);
     Mono<Boolean> existsByClientId(String clientId);
-    Flux<BankAccount> findAllByBankAccountType_Id(String Id);
+    Flux<BankAccount> findByBankIdAndCreationDateBetween(String Id, Date startDate, Date endDate);
 }
