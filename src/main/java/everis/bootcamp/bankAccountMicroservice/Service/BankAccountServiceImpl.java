@@ -266,26 +266,6 @@ public class BankAccountServiceImpl implements BankAccountService {
         return bankAccountRepository.existsByClientId(clientId);
     }
 
-//    @Override
-//    public Mono<BankAccount> tranference(String id, BankAccountTransaction bankAccountTransaction) {
-//        return bankAccountRepository.findById(id).flatMap(bankAccount -> {
-//            double total = bankAccount.getMonto();
-//            if (total+bankAccountTransaction.getTransferenceAmount()>0){
-//                bankAccount.setMonto(total+bankAccountTransaction.getTransferenceAmount());
-//            }else{
-//                return Mono.error(new Exception("Monto a retirar supera a monto actual"));
-//            }
-//            BankAccountTransaction newTransaction = new BankAccountTransaction();
-//            newTransaction.setIdCliente(bankAccountTransaction.getIdCliente());
-//            newTransaction.setSerialNumber(bankAccountTransaction.getSerialNumber());
-//            newTransaction.setTransferenceType("TRANSFERENCE");
-//            newTransaction.setTransferenceAmount(bankAccountTransaction.getTransferenceAmount());
-//            newTransaction.setTotalAmount(bankAccount.getMonto());
-//            bankAccountTransactionRepository.save(newTransaction).subscribe();
-//            return bankAccountRepository.save(bankAccount);
-//        });
-//    }
-
 
     @Override
     public Mono<BankAccount> tranference(String id, BankAccountTransaction bankAccountTransaction) {
@@ -327,7 +307,7 @@ public class BankAccountServiceImpl implements BankAccountService {
                 .filter(bankAccount ->bankAccount.getMonto()>0)
                 .switchIfEmpty(Mono.error(new Exception("Monto a pagar debe ser mayor a 0")))
                 .filter(bankAccount ->bankAccount.getMonto()-creditPaymentRequest.getAmmount()>=0)
-                .switchIfEmpty(Mono.error(new Exception("Monto a pagar supera a monto en deuda")))
+                .switchIfEmpty(Mono.error(new Exception("Monto a pagar supera a monto en cuenta")))
                 .flatMap(bankAccount -> {
                     double descuento = bankAccount.getComision();
                     if (bankAccount.getTransactionLeft() > 0) {
@@ -346,11 +326,17 @@ public class BankAccountServiceImpl implements BankAccountService {
                     System.out.println("MONTO INGRESADO:    " + newTransaction.getTransferenceAmount());
                     System.out.println("MONTO TOTAL ACTUAL: " + newTransaction.getTotalAmount());
                     System.out.println("LIMITE PARA RETIRAR:" + bankAccount.getMinBalance());
-                    bankAccountRepository.save(bankAccount).subscribe();
 
-                    transfere(creditPaymentRequest).subscribe();
-
-                    return Mono.just(creditPaymentRequest);
+                    return Mono.just(creditPaymentRequest).map(creditPaymentRequest1 -> {
+                        try {
+                            transfere(creditPaymentRequest).subscribe();
+                        }catch (Exception e){
+                            System.out.println("ERROR DE TRANSFERENCIA");
+                            return creditPaymentRequest;
+                        }
+                        bankAccountRepository.save(bankAccount).subscribe();
+                        return creditPaymentRequest;
+                    });
                 });
         }catch (Exception e){
             return Mono.error(e);
@@ -372,9 +358,13 @@ public class BankAccountServiceImpl implements BankAccountService {
 
     @Override
     public Flux<BankAccount> readAllByBankInTime(String bankId,int days) {
+        if (days>=0){
+            return Flux.error(new Exception("Los dias deben ser numeros positivos"));
+        }else{
         long DAY_IN_MS = 1000 * 60 * 60 * 24;
         Date begin = new Date(System.currentTimeMillis() - (days * DAY_IN_MS));
         System.out.println("DIAS: "+days);
         return bankAccountRepository.findByBankIdAndCreationDateBetween(bankId,begin,new Date());
+        }
     }
 }
